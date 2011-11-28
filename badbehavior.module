@@ -1,0 +1,205 @@
+<?php
+
+// Point BB scripts path to new universal libraries directory. 
+define('BB2_CWD', './sites/all/libraries/bad-behavior');
+//define('BB2_CWD', '../../libraries/bad-behavior');
+
+// Implements hook_help().
+function badbehavior_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case "admin/reports/badbehavior":
+      $output .= '<p>' . t("The Bad Behavior module examines HTTP requests from visitors to your web site, and any suspicious requests are logged for later review. Suspicious visitors are shown an error page with instructions on how to view the site without triggering the bad behavior error messages.") . '</p>';
+      break;
+  }
+  return $output;
+}
+
+// Implements hook_permission().
+function badbehavior_permission() {
+  return array(
+    'administer bad behavior' => array(
+      'title' => t('Administer Bad Behavior'),
+      'description' => t('bypass bad behavior protection'),
+    ),
+  );
+}
+
+// Implements hook_menu().
+function badbehavior_menu() {
+  $items['admin/settings/badbehavior'] = array(
+    'title' => 'Bad Behavior',
+    'description' => 'Configure automatic spam blocking for your site.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('badbehavior_settings_form'),
+    'access arguments' => array('administer bad behavior'),
+    'file' => 'badbehavior.admin.inc',
+  );
+  $items['admin/reports/badbehavior'] = array(
+    'title' => 'Bad Behavior',
+    'description' => 'Examine the spam blocking logs for your web site.',
+    'page callback' => 'badbehavior_overview',
+    'access arguments' => array('administer bad behavior'),
+    'file' => 'badbehavior.admin.inc',
+  );
+  $items['admin/reports/badbehavior/event'] = array(
+    'title' => 'Details',
+    'page callback' => 'badbehavior_event',
+    'access arguments' => array('administer bad behavior'),
+    'type' => MENU_CALLBACK,
+    'file' => 'badbehavior.admin.inc',
+  );
+  return $items;
+}
+
+// Implements hook_boot().
+function badbehavior_boot() {
+  if (!$GLOBALS['user']->uid) {
+    badbehavior_start_badbehavior();
+  }
+}
+
+// Implements hook_init().
+function badbehavior_init() {
+  if ($GLOBALS['user']->uid) {
+    badbehavior_start_badbehavior();
+  }
+// Adds CSS to hide Project Honey Pot QuickLink link in the footer of every page.
+  drupal_add_css(drupal_get_path('module', 'badbehavior') .'/badbehavior.css');
+}
+
+function badbehavior_start_badbehavior() {
+  if (function_exists('user_access') && user_access('bypass bad behavior protection')) {
+    return;
+  }
+  elseif (badbehavior_load_includes()) {
+    bb2_install();
+    bb2_start(bb2_read_settings());
+  }
+}
+
+// Load BadBehavior library files.
+function badbehavior_load_includes() {
+  //file_put_contents('../../libraries/test.txt', BB2_CWD . '/bad-behavior/core.inc.php');
+  if (is_file(BB2_CWD .'/bad-behavior/core.inc.php') && is_file(BB2_CWD .'/bad-behavior/responses.inc.php') && is_file(BB2_CWD .'/bad-behavior-mysql.php')) {
+    require_once(BB2_CWD .'/bad-behavior/core.inc.php');
+    require_once(BB2_CWD .'/bad-behavior/responses.inc.php');
+    require_once(BB2_CWD .'/bad-behavior-mysql.php');
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+// Return current time in the format preferred by your database.
+function bb2_db_date() {
+  return gmdate('Y-m-d H:i:s'); // Example is MySQL format
+}
+
+// Return affected rows from most recent query.
+function bb2_db_affected_rows() {
+  return db_affected_rows();
+}
+
+// Escape a string for database usage
+function bb2_db_escape($string) {
+  //return db_escape_string($string);
+}
+
+// Return the number of rows in a particular query.
+function bb2_db_num_rows($result) {
+  if ($result != FALSE)
+    return count($result);
+  return 0;
+}
+
+function badbehavior_db_errortrap($errno, $string) {
+}
+
+// Run a query and return the results, if any.
+function bb2_db_query($query) {
+  set_error_handler('badbehavior_db_errortrap');
+  $result = db_query($query);
+  restore_error_handler();
+  if ($result == FALSE)
+    return FALSE;
+  return db_affected_rows();
+}
+
+// Return all rows in a particular query.
+function bb2_db_rows($result) {
+  return $result;
+}
+
+// Return emergency contact email address.
+function bb2_email() {
+  return variable_get('badbehavior_mail', variable_get('site_mail', ini_get('sendmail_from')));
+}
+
+// Write settings to database.
+function bb2_write_settings($settings) {
+  return;
+}
+
+// Retrieve settings from database.
+function bb2_read_settings() {
+  $logging = variable_get('badbehavior_logging', 1);
+  return array(
+    'log_table' => '{bad_behavior_log}',
+    'display_stats' => FALSE,
+    'reverse_proxy' => variable_get('badbehavior_reverse_proxy', variable_get('reverse_proxy', 0)),
+    'reverse_proxy_header' =>  'X-Forwarded-For',
+    'reverse_proxy_addresses' => variable_get('reverse_proxy_addresses', array()),
+    'strict' => variable_get('badbehavior_strict', 0),
+    'verbose' => $logging == 'verbose',
+    'logging' => !empty($logging),
+    'httpbl_key' => variable_get('badbehavior_httpbl_key', ''),
+    'httpbl_threat' => variable_get('badbehavior_httpbl_threat', 25),
+    'httpbl_maxage' => variable_get('badbehavior_httpbl_age', 30),
+    'offsite_forms' => variable_get('badbehavior_offsite_forms', 'FALSE'),
+  );
+}
+
+// Installation.
+function bb2_install() {
+  if (variable_get('badbehavior_db_installed', 0) != BB2_VERSION) {
+    bb2_db_query(bb2_table_structure('{bad_behavior_log}'));
+    variable_set('badbehavior_db_installed', BB2_VERSION);
+  }
+}
+
+// Return the top-level relative path of wherever we are (for cookies).
+function bb2_relative_path() {
+  global $base_path;
+  return $base_path;
+}
+
+// Converts dates in BB log screen output to server's time zone.
+function bb2_convertdate($bbdate) {
+  $timestamp = strtotime($bbdate .' UTC');
+  if (variable_get('badbehavior_log_timeformat', '24') == '24') {
+    return format_date($timestamp, 'custom', 'Y-m-d H:i:s');
+  }
+  else {
+    return format_date($timestamp, 'custom', 'Y-m-d g:i:s a');
+  }
+}
+
+/*
+// Adds a hidden Project Honey Pot QuickLink link to the footer of every page.
+function badbehavior_footer() {
+  if (variable_get('badbehavior_httpbl_quicklink', '')) {
+    return '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') . '">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n";
+  }
+}
+*/
+/**
+ * Implements hook_page_build().
+ */
+function badbehavior_page_build(&$page) {
+  if (variable_get('badbehavior_httpbl_quicklink', '')) {                       
+    return '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') .'">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n";
+  } 
+}
+
