@@ -51,7 +51,6 @@ function badbehavior_menu() {
   );
   return $items;
 }
-
 // Implements hook_boot().
 function badbehavior_boot() {
   if (!$GLOBALS['user']->uid) {
@@ -105,6 +104,7 @@ function bb2_db_affected_rows() {
 // Escape a string for database usage
 function bb2_db_escape($string) {
   //return db_escape_string($string);
+  return $string;
 }
 
 // Return the number of rows in a particular query.
@@ -124,7 +124,7 @@ function bb2_db_query($query) {
   restore_error_handler();
   if ($result == FALSE)
     return FALSE;
-  return db_affected_rows();
+  return $result;
 }
 
 // Return all rows in a particular query.

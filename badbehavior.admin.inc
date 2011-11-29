@@ -12,30 +12,38 @@ function badbehavior_overview() {
   $header = array(
     array('data' => t('Response')),
     array('data' => t('Reason')),
-    array('data' => t('Date'), 'field' => 'w.date', 'sort' => 'desc'),
-    array('data' => t('IP'), 'field' => 'w.ip'),
-    array('data' => t('Agent'), 'field' => 'w.user_agent', 'colspan' => 2)
+    array('data' => t('Date'), 'field' => 'b.date', 'sort' => 'desc'),
+    array('data' => t('IP'), 'field' => 'b.ip'),
+    array('data' => t('Agent'), 'field' => 'b.user_agent', 'colspan' => 2)
   );
   $logtype = variable_get('badbehavior_logging', 1);
   if ($logtype == 'verbose') {
     $sql = db_select('bad_behavior_log', 'b')
       ->fields('b')
       ->extend('PagerDefault')
-      ->limit(10)
+        ->limit(20)
+      ->extend('TableSort')
+        ->orderByHeader($header)
       ->execute();
-    //$sql->orderBy($header);    
   }
   elseif ($logtype == '1') {
-    $sql = "SELECT w.* FROM {bad_behavior_log} w WHERE w.key <> '00000000' " . tablesort_sql($header);
+//  if ($logtype =='1') {
+//    $sql = "SELECT w.* FROM {bad_behavior_log} w WHERE w.key <> '00000000' " . tablesort_sql($header);
+    $sql = db_select('bad_behavior_log', 'b')
+      ->fields('b')
+      ->extend('PagerDefault')
+        ->limit(20)
+      ->extend('TableSort')
+        ->orderByHeader($header)
+      ->condition('b.key', '00000000', '<>')
+      ->execute();
   }
-  else {
-    $sql = '';
-  }
-  if ($sql != '') {
+  $rows = array();
+  if (isset($sql)) {
     foreach ($sql as $record) {
       $response = bb2_get_response($record->key);
       $record->localdate = bb2_convertdate($record->date);
-      $rows = array(
+      $rows[] = array(
         'data' => array(
           $response['response'],
           $response['log'],
@@ -47,23 +55,12 @@ function badbehavior_overview() {
       );
     }
   }
-  if (!isset($rows)) {
-    $rows = array(array('data' => t('No log messages available.'), 'colspan' => '6'));
-  }
-  $pager_vars = array(
-    'tags'=>'',
-    'element'=>'',
-    'parameters'=>'',
-    'quantity'=>'20',
-  );
-//  $output = theme_table($table_vars) . theme_pager(array('pager', NULL, 50, 0));
   $output = theme('table',
     array(
         'header'=>$header,
         'rows'=>$rows,
         'caption' => '',
-        'sticky' => TRUE,
-        'empty' => 'No nodes created...',
+        'empty' => 'No log messages available',
     )
   );
   $output .= theme('pager',
@@ -71,7 +68,6 @@ function badbehavior_overview() {
       'tags' => array()
     )
   );
-  
   return $output;
 }
 
@@ -80,35 +76,40 @@ function badbehavior_event($id = NULL) {
     return 'Bad Behavior is not installed correctly. See the <a href="/sites/all/modules/badbehavior/README.txt">README.txt</a> for installation details.';
   }
   $output = '';
-  $result = db_query('SELECT w.* FROM {bad_behavior_log} w WHERE w.id = %d', $id);
-  if ($behave = db_fetch_object($result)) {
-      $response = bb2_get_response($behave->key);
-      $behave->localdate = bb2_convertdate($behave->date);
-      $output .= '<table border="1" cellpadding="2" cellspacing="2">';
-      $output .= ' <tr><th>'. t('IP Addr') .'</th><td>';
-    if ($behave->ip) {
-      $output .= $behave->ip .'</td></tr>'; }
+//  $result = db_query('SELECT w.* FROM {bad_behavior_log} w WHERE w.id = %d', $id);
+  $result = db_select('bad_behavior_log', 'b')
+      ->fields('b')
+      ->condition('id', $id, '=')
+      ->execute();
+  $rows = array();
+  foreach ($result as $record){
+    $response = bb2_get_response($record->key);
+    $record->localdate = bb2_convertdate($record->date);
+    $output .= '<table border="1" cellpadding="2" cellspacing="2">';
+    $output .= ' <tr><th>'. t('IP Addr') .'</th><td>';
+    if ($record->ip) {
+      $output .= $record->ip .'</td></tr>'; }
     else {
       $output .= '<span style="color:red">Possible Proxy Settings Error:</span> No IP address reported</td></tr>';
     }
-      $output .= ' <tr><th>'. t('Hostname') .'</th><td>';
-    if ($behave->ip) {
-      $output .= gethostbyaddr($behave->ip) .' ('. l('whois', 'http://www.whois.sc/'. $behave->ip) .')</td></tr>';
+    $output .= ' <tr><th>'. t('Hostname') .'</th><td>';
+    if ($record->ip) {
+      $output .= gethostbyaddr($record->ip) .' ('. l('whois', 'http://www.whois.sc/'. $record->ip) .')</td></tr>';
     }
     else {
-      $output .= '<span style="color:red">Possible Proxy Settings Error:</span> No hostname reported</td></tr>';
+     $output .= '<span style="color:red">Possible Proxy Settings Error:</span> No hostname reported</td></tr>';
     }
-      $output .= ' <tr><th>'. t('Date') .'</th><td>'. $behave->localdate .'</td></tr>';
-      $output .= ' <tr><th>'. t('Request type') .'</th><td>'. $behave->request_method .'</td></tr>';
-      $output .= ' <tr><th>'. t('URI') .'</th><td>'. $behave->request_uri .'</td></tr>';
-      $output .= ' <tr><th>'. t('Protocol') .'</th><td>'. $behave->server_protocol .'</td></tr>';
-      $output .= ' <tr><th>'. t('User Agent') .'</th><td>'. $behave->user_agent .'</td></tr>';
-      $output .= ' <tr><th>'. t('Headers') .'</th><td>'. $behave->http_headers .'</td></tr>';
-      $output .= ' <tr><th>'. t('Request Entity') .'</th><td>'. $behave->request_entity .'</td></tr>';
-      $output .= ' <tr><th>'. t('Denied Reason') .'</th><td>'. $response['log'] .'</td></tr>';
-      $output .= ' <tr><th>'. t('Explanation') .'</th><td>'. $response['explanation'] .'</td></tr>';
-      $output .= ' <tr><th>'. t('Response') .'</th><td>'. $response['response'] .'</td></tr>';
-      $output .= '</table>';
+    $output .= ' <tr><th>'. t('Date') .'</th><td>'. $record->localdate .'</td></tr>';
+    $output .= ' <tr><th>'. t('Request type') .'</th><td>'. $record->request_method .'</td></tr>';
+    $output .= ' <tr><th>'. t('URI') .'</th><td>'. $record->request_uri .'</td></tr>';
+    $output .= ' <tr><th>'. t('Protocol') .'</th><td>'. $record->server_protocol .'</td></tr>';
+    $output .= ' <tr><th>'. t('User Agent') .'</th><td>'. $record->user_agent .'</td></tr>';
+    $output .= ' <tr><th>'. t('Headers') .'</th><td>'. $record->http_headers .'</td></tr>';
+    $output .= ' <tr><th>'. t('Request Entity') .'</th><td>'. $record->request_entity .'</td></tr>';
+    $output .= ' <tr><th>'. t('Denied Reason') .'</th><td>'. $response['log'] .'</td></tr>';
+    $output .= ' <tr><th>'. t('Explanation') .'</th><td>'. $response['explanation'] .'</td></tr>';
+    $output .= ' <tr><th>'. t('Response') .'</th><td>'. $response['response'] .'</td></tr>';
+    $output .= '</table>';
   }
   return $output;
 }
