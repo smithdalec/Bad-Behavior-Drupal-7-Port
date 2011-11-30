@@ -2,10 +2,12 @@
 
 /**
  * @file
- * Install, update and uninstall functions for the Bad Behavior module. 
+ * Install, update and uninstall functions for the Bad Behavior module.
  */
 
-// Implements hook_schema().
+/**
+ * Implements hook_schema().
+ */
 function badbehavior_schema() {
   $schema['bad_behavior_log'] = array(
     'description' => 'Stores hit logs for the Bad Behavior module.',
@@ -61,7 +63,9 @@ function badbehavior_schema() {
   return $schema;
 }
 
-// Implements hook_requirements().
+/**
+ * Implements hook_requirements().
+ */
 function badbehavior_requirements($phase) {
   $requirements = array();
   if ($phase == 'runtime') {
@@ -92,7 +96,9 @@ function badbehavior_requirements($phase) {
   return $requirements;
 }
 
-// Implements hook_install().
+/**
+ * Implements hook_install().
+ */
 function badbehavior_install() {
   //drupal_install_schema('badbehavior');
   // Set module weight for the badbehavior module
@@ -100,12 +106,13 @@ function badbehavior_install() {
   $thestatus[] =   db_query("UPDATE {system} SET weight = -999 WHERE type = 'module' AND name = 'badbehavior'");
   // If there is one FALSE value in the status array, there was an error.
   if (array_search(FALSE, $thestatus) !== FALSE) {
-    drupal_set_message(t('Setting the module weight of Bad Behavior failed.'), 'error');
+    drupal_set_message(st('Setting the module weight of Bad Behavior failed.'), 'error');
   }
-  
 }
 
-// Implements hook_uninstall().
+/**
+ * Implements hook_uninstall().
+ */
 function badbehavior_uninstall() {
   //drupal_uninstall_schema('badbehavior');
   variable_del('badbehavior_mail');

@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Drush integration for the badbehavior module. 
+ * Drush integration for the badbehavior module.
  */
 
 /**

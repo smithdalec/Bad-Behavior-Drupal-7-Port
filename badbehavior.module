@@ -1,10 +1,12 @@
 <?php
 
-// Point BB scripts path to new universal libraries directory. 
+// Point BB scripts path to new universal libraries directory.
 define('BB2_CWD', './sites/all/libraries/bad-behavior');
 //define('BB2_CWD', '../../libraries/bad-behavior');
 
-// Implements hook_help().
+/**
+ * Implements hook_help().
+ */
 function badbehavior_help($path, $arg) {
   $output = '';
   switch ($path) {
@@ -15,7 +17,9 @@ function badbehavior_help($path, $arg) {
   return $output;
 }
 
-// Implements hook_permission().
+/**
+ * Implements hook_permission().
+ */
 function badbehavior_permission() {
   return array(
     'administer bad behavior' => array(
@@ -25,7 +29,9 @@ function badbehavior_permission() {
   );
 }
 
-// Implements hook_menu().
+/**
+ * Implements hook_menu().
+ */
 function badbehavior_menu() {
   $items['admin/settings/badbehavior'] = array(
     'title' => 'Bad Behavior',
@@ -51,20 +57,24 @@ function badbehavior_menu() {
   );
   return $items;
 }
-// Implements hook_boot().
+/**
+ * Implements hook_boot().
+ */
 function badbehavior_boot() {
   if (!$GLOBALS['user']->uid) {
     badbehavior_start_badbehavior();
   }
 }
 
-// Implements hook_init().
+/**
+ * Implements hook_init().
+ */
 function badbehavior_init() {
   if ($GLOBALS['user']->uid) {
     badbehavior_start_badbehavior();
   }
 // Adds CSS to hide Project Honey Pot QuickLink link in the footer of every page.
-  drupal_add_css(drupal_get_path('module', 'badbehavior') .'/badbehavior.css');
+  drupal_add_css(drupal_get_path('module', 'badbehavior') . '/badbehavior.css');
 }
 
 function badbehavior_start_badbehavior() {
@@ -80,10 +90,10 @@ function badbehavior_start_badbehavior() {
 // Load BadBehavior library files.
 function badbehavior_load_includes() {
   //file_put_contents('../../libraries/test.txt', BB2_CWD . '/bad-behavior/core.inc.php');
-  if (is_file(BB2_CWD .'/bad-behavior/core.inc.php') && is_file(BB2_CWD .'/bad-behavior/responses.inc.php') && is_file(BB2_CWD .'/bad-behavior-mysql.php')) {
-    require_once(BB2_CWD .'/bad-behavior/core.inc.php');
-    require_once(BB2_CWD .'/bad-behavior/responses.inc.php');
-    require_once(BB2_CWD .'/bad-behavior-mysql.php');
+  if (is_file(BB2_CWD . '/bad-behavior/core.inc.php') && is_file(BB2_CWD . '/bad-behavior/responses.inc.php') && is_file(BB2_CWD . '/bad-behavior-mysql.php')) {
+    require_once(BB2_CWD . '/bad-behavior/core.inc.php');
+    require_once(BB2_CWD . '/bad-behavior/responses.inc.php');
+    require_once(BB2_CWD . '/bad-behavior-mysql.php');
     return TRUE;
   }
   else {
@@ -177,7 +187,7 @@ function bb2_relative_path() {
 
 // Converts dates in BB log screen output to server's time zone.
 function bb2_convertdate($bbdate) {
-  $timestamp = strtotime($bbdate .' UTC');
+  $timestamp = strtotime($bbdate . ' UTC');
   if (variable_get('badbehavior_log_timeformat', '24') == '24') {
     return format_date($timestamp, 'custom', 'Y-m-d H:i:s');
   }
@@ -193,13 +203,14 @@ function badbehavior_footer() {
     return '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') . '">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n";
   }
 }
-*/
+ */
+
 /**
  * Implements hook_page_build().
  */
 function badbehavior_page_build(&$page) {
-  if (variable_get('badbehavior_httpbl_quicklink', '')) {                       
-    return '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') .'">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n";
-  } 
+  if (variable_get('badbehavior_httpbl_quicklink', '')) {
+    return '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') . '">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n";
+  }
 }
 

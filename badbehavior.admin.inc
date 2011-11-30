@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Admin page callbacks for the badbehavior module. 
+ * Admin page callbacks for the badbehavior module.
  */
 
 function badbehavior_overview() {
@@ -57,8 +57,8 @@ function badbehavior_overview() {
   }
   $output = theme('table',
     array(
-        'header'=>$header,
-        'rows'=>$rows,
+        'header' => $header,
+        'rows' => $rows,
         'caption' => '',
         'empty' => 'No log messages available',
     )
@@ -82,33 +82,33 @@ function badbehavior_event($id = NULL) {
       ->condition('id', $id, '=')
       ->execute();
   $rows = array();
-  foreach ($result as $record){
+  foreach ($result as $record) {
     $response = bb2_get_response($record->key);
     $record->localdate = bb2_convertdate($record->date);
     $output .= '<table border="1" cellpadding="2" cellspacing="2">';
-    $output .= ' <tr><th>'. t('IP Addr') .'</th><td>';
+    $output .= ' <tr><th>' . t('IP Addr') . '</th><td>';
     if ($record->ip) {
-      $output .= $record->ip .'</td></tr>'; }
+      $output .= $record->ip . '</td></tr>'; }
     else {
       $output .= '<span style="color:red">Possible Proxy Settings Error:</span> No IP address reported</td></tr>';
     }
-    $output .= ' <tr><th>'. t('Hostname') .'</th><td>';
+    $output .= ' <tr><th>' . t('Hostname') . '</th><td>';
     if ($record->ip) {
-      $output .= gethostbyaddr($record->ip) .' ('. l('whois', 'http://www.whois.sc/'. $record->ip) .')</td></tr>';
+      $output .= gethostbyaddr($record->ip) . ' (' . l(t('whois'), 'http://www.whois.sc/' . $record->ip) . ')</td></tr>';
     }
     else {
-     $output .= '<span style="color:red">Possible Proxy Settings Error:</span> No hostname reported</td></tr>';
+    $output .= '<span style="color:red">Possible Proxy Settings Error:</span> No hostname reported</td></tr>';
     }
-    $output .= ' <tr><th>'. t('Date') .'</th><td>'. $record->localdate .'</td></tr>';
-    $output .= ' <tr><th>'. t('Request type') .'</th><td>'. $record->request_method .'</td></tr>';
-    $output .= ' <tr><th>'. t('URI') .'</th><td>'. $record->request_uri .'</td></tr>';
-    $output .= ' <tr><th>'. t('Protocol') .'</th><td>'. $record->server_protocol .'</td></tr>';
-    $output .= ' <tr><th>'. t('User Agent') .'</th><td>'. $record->user_agent .'</td></tr>';
-    $output .= ' <tr><th>'. t('Headers') .'</th><td>'. $record->http_headers .'</td></tr>';
-    $output .= ' <tr><th>'. t('Request Entity') .'</th><td>'. $record->request_entity .'</td></tr>';
-    $output .= ' <tr><th>'. t('Denied Reason') .'</th><td>'. $response['log'] .'</td></tr>';
-    $output .= ' <tr><th>'. t('Explanation') .'</th><td>'. $response['explanation'] .'</td></tr>';
-    $output .= ' <tr><th>'. t('Response') .'</th><td>'. $response['response'] .'</td></tr>';
+    $output .= ' <tr><th>' . t('Date') . '</th><td>' . $record->localdate . '</td></tr>';
+    $output .= ' <tr><th>' . t('Request type') . '</th><td>' . $record->request_method . '</td></tr>';
+    $output .= ' <tr><th>' . t('URI') . '</th><td>' . $record->request_uri . '</td></tr>';
+    $output .= ' <tr><th>' . t('Protocol') . '</th><td>' . $record->server_protocol . '</td></tr>';
+    $output .= ' <tr><th>' . t('User Agent') . '</th><td>' . $record->user_agent . '</td></tr>';
+    $output .= ' <tr><th>' . t('Headers') . '</th><td>' . $record->http_headers . '</td></tr>';
+    $output .= ' <tr><th>' . t('Request Entity') . '</th><td>' . $record->request_entity . '</td></tr>';
+    $output .= ' <tr><th>' . t('Denied Reason') . '</th><td>' . $response['log'] . '</td></tr>';
+    $output .= ' <tr><th>' . t('Explanation') . '</th><td>' . $response['explanation'] . '</td></tr>';
+    $output .= ' <tr><th>' . t('Response') . '</th><td>' . $response['response'] . '</td></tr>';
     $output .= '</table>';
   }
   return $output;
