@@ -98,22 +98,27 @@ function badbehavior_requirements($phase) {
 
 /**
  * Implements hook_install().
- *
+ */
 function badbehavior_install() {
   // Set module weight for the badbehavior module
   $thestatus = array();
-  $thestatus[] =   db_query("UPDATE {system} SET weight = -999 WHERE type = 'module' AND name = 'badbehavior'");
+  $thestatus[] =   db_update('system')
+    ->fields(array(
+      'weight' => -999,
+    ))
+    ->condition('type', 'module', '=')
+    ->condition('name', 'badbehavior', '=')
+    ->execute();
   // If there is one FALSE value in the status array, there was an error.
   if (array_search(FALSE, $thestatus) !== FALSE) {
     drupal_set_message(st('Setting the module weight of Bad Behavior failed.'), 'error');
   }
-}* /
+}
 
 /**
  * Implements hook_uninstall().
- *
+ */
 function badbehavior_uninstall() {
-  drupal_uninstall_schema('badbehavior');
   variable_del('badbehavior_mail');
   variable_del('badbehavior_email');
   variable_del('badbehavior_logging');
@@ -130,7 +135,7 @@ function badbehavior_uninstall() {
   variable_del('badbehavior_verbose_logging_enable');
   variable_del('badbehavior_db_installed');
   cache_clear_all('variables', 'cache');
-}*/
+}
 
 // Rename variables.
 function badbehavior_update_7100() {
@@ -151,19 +156,14 @@ function badbehavior_update_7100() {
 
 // Reset module weight for earliest possible loading position.
 function badbehavior_update_7300() {
-  //$retfun = array();
-  //$retfun[] = update_sql("UPDATE {system} SET weight = -999 WHERE type = 'module' AND name = 'badbehavior'");
   $retfun = array();
   $retfun[] = db_update('system')
     ->fields(array(
-      'weight' => -998,
+      'weight' => -999,
     ))
     ->condition('type', 'module', '=')
     ->condition('name', 'badbehavior', '=')
     ->execute();
-    //"UPDATE {system} SET weight = -999 WHERE type = 'module' AND name =     'badbehavior'";
-//  return $retfun;
  return;
-
 }
 

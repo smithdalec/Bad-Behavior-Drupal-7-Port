@@ -11,7 +11,7 @@ function badbehavior_help($path, $arg) {
   switch ($path) {
     case "admin/reports/badbehavior":
       $output .= '<p>' . t("The Bad Behavior module examines HTTP requests from visitors to your web site, and any suspicious requests are logged for later review. Suspicious visitors are shown an error page with instructions on how to view the site without triggering the bad behavior error messages.") . '</p>';
-      break;
+    break;
   }
   return $output;
 }
@@ -111,6 +111,7 @@ function bb2_db_affected_rows() {
 
 // Escape a string for database usage
 function bb2_db_escape($string) {
+  // No longer needed in D7
   //return db_escape_string($string);
   return $string;
 }
@@ -211,4 +212,3 @@ function badbehavior_page_build(&$page) {
     return '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') . '">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n";
   }
 }
-

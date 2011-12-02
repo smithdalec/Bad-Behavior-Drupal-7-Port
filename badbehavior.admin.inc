@@ -27,8 +27,6 @@ function badbehavior_overview() {
       ->execute();
   }
   elseif ($logtype == '1') {
-//  if ($logtype =='1') {
-//    $sql = "SELECT w.* FROM {bad_behavior_log} w WHERE w.key <> '00000000' " . tablesort_sql($header);
     $sql = db_select('bad_behavior_log', 'b')
       ->fields('b')
       ->extend('PagerDefault')
@@ -57,10 +55,10 @@ function badbehavior_overview() {
   }
   $output = theme('table',
     array(
-        'header' => $header,
-        'rows' => $rows,
-        'caption' => '',
-        'empty' => 'No log messages available',
+      'header' => $header,
+      'rows' => $rows,
+      'caption' => '',
+      'empty' => 'No log messages available',
     )
   );
   $output .= theme('pager',
@@ -76,11 +74,10 @@ function badbehavior_event($id = NULL) {
     return 'Bad Behavior is not installed correctly. See the <a href="/sites/all/modules/badbehavior/README.txt">README.txt</a> for installation details.';
   }
   $output = '';
-//  $result = db_query('SELECT w.* FROM {bad_behavior_log} w WHERE w.id = %d', $id);
   $result = db_select('bad_behavior_log', 'b')
-      ->fields('b')
-      ->condition('id', $id, '=')
-      ->execute();
+    ->fields('b')
+    ->condition('id', $id, '=')
+    ->execute();
   $rows = array();
   foreach ($result as $record) {
     $response = bb2_get_response($record->key);
@@ -251,4 +248,3 @@ function badbehavior_settings_form_validate($form, &$form_state) {
     form_set_error('badbehavior_httpbl_age', t('You must enter only a number from 1 to 60 for the http:BL Maximum Threat Age.'));
   }
 }
-
