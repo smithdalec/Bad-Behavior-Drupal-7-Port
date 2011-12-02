@@ -18,6 +18,9 @@ Additional commits for module improvement by:
 - Dave Reid (http://drupal.org/user/53892)
 - Greg Piper (http://drupal.org/user/426296)
 
+Upgrade to Drupal 7 by:
+- Dale Smith (http://drupal.org/user/1654510)
+
 Bad Behavior PHP Scripts by:
 - Michael Hampton (http://bad-behavior.ioerror.us)
 
