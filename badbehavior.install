@@ -137,7 +137,11 @@ function badbehavior_uninstall() {
   cache_clear_all('variables', 'cache');
 }
 
-// Rename variables.
+/**
+ * Rename variables.
+ *
+ * Implements hook_update_N().
+ */
 function badbehavior_update_7100() {
   $mail = variable_get('badbehavior_email', variable_get('site_mail', ini_get('sendmail_from')));
   variable_set('badbehavior_mail', $mail);
@@ -154,7 +158,11 @@ function badbehavior_update_7100() {
   return;
 }
 
-// Reset module weight for earliest possible loading position.
+/**
+ * Reset module weight for earliest possible loading position.
+ *
+ * Implements hook_update_N().
+ */
 function badbehavior_update_7300() {
   $retfun = array();
   $retfun[] = db_update('system')
@@ -164,6 +172,6 @@ function badbehavior_update_7300() {
     ->condition('type', 'module', '=')
     ->condition('name', 'badbehavior', '=')
     ->execute();
- return;
+  return;
 }
 

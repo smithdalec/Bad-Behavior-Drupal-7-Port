@@ -86,7 +86,16 @@ function badbehavior_start_badbehavior() {
   }
 }
 
-// Load BadBehavior library files.
+/**
+ * Load BadBehavior library files.
+ *
+ * Check to make sure the main Bad Behavior files (external content) exist
+ * and require them for the module to actually work. The default location
+ * is /sites/all/libraries/bad-behavior/bad-behavior/
+ *
+ * @return bool
+ * Returns TRUE if files exist and are read, otherwise returns FALSE
+ */
 function badbehavior_load_includes() {
   if (is_file(BB2_CWD . '/bad-behavior/core.inc.php') && is_file(BB2_CWD . '/bad-behavior/responses.inc.php') && is_file(BB2_CWD . '/bad-behavior-mysql.php')) {
     require_once(BB2_CWD . '/bad-behavior/core.inc.php');
@@ -99,34 +108,43 @@ function badbehavior_load_includes() {
   }
 }
 
-// Return current time in the format preferred by your database.
+/**
+ * Return current time in the format preferred by your database.
+ *
+ * @return string
+ * Returns a formatted date string. If a non-numeric value is used for 
+ * timestamp, FALSE is returned and an E_WARNING level error is emitted.
+ */
 function bb2_db_date() {
-  return gmdate('Y-m-d H:i:s'); // Example is MySQL format
+   return gmdate('Y-m-d H:i:s'); // Example is MySQL format
 }
 
-// Return affected rows from most recent query.
-function bb2_db_affected_rows() {
-  return db_affected_rows();
-}
-
-// Escape a string for database usage
-function bb2_db_escape($string) {
-  // No longer needed in D7
-  //return db_escape_string($string);
-  return $string;
-}
-
-// Return the number of rows in a particular query.
-function bb2_db_num_rows($result) {
-  if ($result != FALSE)
-    return count($result);
-  return 0;
-}
-
+/**
+ * Escape a string for database usage
+ *
+ * @param string $string
+ *
+ * @return string
+ */
+  function bb2_db_escape($string) {                                               
+    return addslashes($string);                                             
+ }
+ 
+/**
+ * Someone doesn't like PHP's error handling?
+ *
+ * @param int $errno
+ * @param string $string 
+ */
 function badbehavior_db_errortrap($errno, $string) {
 }
 
-// Run a query and return the results, if any.
+/**
+ * Run a query and return the results, if any.
+ *
+ * @param type $query
+ * @return object
+ */
 function bb2_db_query($query) {
   set_error_handler('badbehavior_db_errortrap');
   $result = db_query($query);
@@ -136,22 +154,29 @@ function bb2_db_query($query) {
   return $result;
 }
 
-// Return all rows in a particular query.
+/**
+ * Return all rows in a particular query.
+ *
+ * @return object
+ */
 function bb2_db_rows($result) {
   return $result;
 }
 
-// Return emergency contact email address.
+/**
+ * Fetch the admin's email address.
+ *
+ * @return string 
+ */
 function bb2_email() {
   return variable_get('badbehavior_mail', variable_get('site_mail', ini_get('sendmail_from')));
 }
 
-// Write settings to database.
-function bb2_write_settings($settings) {
-  return;
-}
-
-// Retrieve settings from database.
+/**
+ * Retrieve settings from database.
+ *
+ * @return array
+ */
 function bb2_read_settings() {
   $logging = variable_get('badbehavior_logging', 1);
   return array(
@@ -170,7 +195,9 @@ function bb2_read_settings() {
   );
 }
 
-// Installation.
+/**
+ * Installation of Bad Behavior
+ */
 function bb2_install() {
   if (variable_get('badbehavior_db_installed', 0) != BB2_VERSION) {
     bb2_db_query(bb2_table_structure('{bad_behavior_log}'));
@@ -178,19 +205,29 @@ function bb2_install() {
   }
 }
 
-// Return the top-level relative path of wherever we are (for cookies).
+/**
+ * Return the top-level relative path of wherever we are (for cookies).
+ *
+ * @return string
+ */
 function bb2_relative_path() {
   global $base_path;
   return $base_path;
 }
 
-// Converts dates in BB log screen output to server's time zone.
+/**
+ * Converts dates in BB log screen output to server's time zone.
+ *
+ * @param $bbdate
+ *
+ * @return string
+ */
 function bb2_convertdate($bbdate) {
   $timestamp = strtotime($bbdate . ' UTC');
   if (variable_get('badbehavior_log_timeformat', '24') == '24') {
     return format_date($timestamp, 'custom', 'Y-m-d H:i:s');
   }
-  else {
+  else {   
     return format_date($timestamp, 'custom', 'Y-m-d g:i:s a');
   }
 }

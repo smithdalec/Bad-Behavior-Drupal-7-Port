@@ -5,6 +5,12 @@
  * Admin page callbacks for the badbehavior module.
  */
 
+/**
+ * Builds the log table seen in the /admin/reports/badbehavior/ page.
+ *
+ * @return string
+ * The actual table in HTML format
+ */
 function badbehavior_overview() {
   if (!badbehavior_load_includes(array('responses'))) {
     return 'Bad Behavior is not installed correctly. See the <a href="/sites/all/modules/badbehavior/README.txt">README.txt</a> for installation details.';
@@ -45,7 +51,7 @@ function badbehavior_overview() {
         'data' => array(
           $response['response'],
           $response['log'],
-          $record->date,
+          $record->localdate,
           $record->ip,
           $record->user_agent,
             l(t('details'), "admin/reports/badbehavior/event/$record->id") // FIX ME
@@ -69,7 +75,16 @@ function badbehavior_overview() {
   return $output;
 }
 
+/**
+ * Builds the "Details" table displaying data about an individual log entry
+ *
+ * @param string $id
+ * 
+ * @return string
+ * The table in HTML format
+ */
 function badbehavior_event($id = NULL) {
+  var_dump($id);
   if (!badbehavior_load_includes(array('responses'))) {
     return 'Bad Behavior is not installed correctly. See the <a href="/sites/all/modules/badbehavior/README.txt">README.txt</a> for installation details.';
   }
@@ -111,6 +126,12 @@ function badbehavior_event($id = NULL) {
   return $output;
 }
 
+/**
+ * Builds the Settings form found on the /admin/settings/badbehavior page
+ *
+ * @return array
+ * An array of data to be displayed in the Settings form.
+ */
 function badbehavior_settings_form() {
 
   $form['standard'] = array(
@@ -120,7 +141,7 @@ function badbehavior_settings_form() {
   $form['standard']['badbehavior_mail'] = array(
     '#type' => 'textfield',
     '#title' => t('Administrator Email'),
-    '#default_value' => variable_get('badbehavior_mail', variable_get('site_mail', ini_get('sendmail_from'))),
+    '#default_value' => bb2_email(),
     '#description' => t('E-mail address for blocked users to contact in order to gain access.'),
     '#required' => TRUE,
   );
@@ -214,15 +235,21 @@ function badbehavior_settings_form() {
   $form['proxy']['badbehavior_reverse_proxy'] = array(
     '#type' => 'checkbox',
     '#title' => 'Enable reverse proxy support',
-    '#default_value' => variable_get('badbehavior_reverse_proxy', variable_get('reverse_proxy', 0)),           // Uses the default from settings.php
+    '#default_value' => variable_get('badbehavior_reverse_proxy', variable_get('reverse_proxy', 0)),           
+      // Uses the default from settings.php
     '#description' => t('When enabled, Bad Behavior will assume it is receiving a connection from a reverse proxy, when a specific HTTP header is received. This option is enabled by default when you enable Drupal\'s built-in reverse_proxy option.'),
   );
-
   return system_settings_form($form);
 }
 
 
-// Settings admimistration form field validation
+/**
+ * Settings admimistration form field validation
+ * 
+ * @param $form
+ *
+ * @param $form_state
+ */
 function badbehavior_settings_form_validate($form, &$form_state) {
   $values = $form_state['values'];
   if (!empty($values['badbehavior_httpbl_quicklink'])) {
