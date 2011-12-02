@@ -1,8 +1,7 @@
 <?php
 
 // Point BB scripts path to new universal libraries directory.
-define('BB2_CWD', './sites/all/libraries/bad-behavior');
-//define('BB2_CWD', '../../libraries/bad-behavior');
+define('BB2_CWD', dirname(__FILE__) . '/../../libraries/bad-behavior');
 
 /**
  * Implements hook_help().
@@ -73,7 +72,7 @@ function badbehavior_init() {
   if ($GLOBALS['user']->uid) {
     badbehavior_start_badbehavior();
   }
-// Adds CSS to hide Project Honey Pot QuickLink link in the footer of every page.
+  // Adds CSS to hide Project Honey Pot QuickLink link in the footer of every page.
   drupal_add_css(drupal_get_path('module', 'badbehavior') . '/badbehavior.css');
 }
 
@@ -89,7 +88,6 @@ function badbehavior_start_badbehavior() {
 
 // Load BadBehavior library files.
 function badbehavior_load_includes() {
-  //file_put_contents('../../libraries/test.txt', BB2_CWD . '/bad-behavior/core.inc.php');
   if (is_file(BB2_CWD . '/bad-behavior/core.inc.php') && is_file(BB2_CWD . '/bad-behavior/responses.inc.php') && is_file(BB2_CWD . '/bad-behavior-mysql.php')) {
     require_once(BB2_CWD . '/bad-behavior/core.inc.php');
     require_once(BB2_CWD . '/bad-behavior/responses.inc.php');

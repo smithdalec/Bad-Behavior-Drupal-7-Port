@@ -98,9 +98,8 @@ function badbehavior_requirements($phase) {
 
 /**
  * Implements hook_install().
- */
+ *
 function badbehavior_install() {
-  //drupal_install_schema('badbehavior');
   // Set module weight for the badbehavior module
   $thestatus = array();
   $thestatus[] =   db_query("UPDATE {system} SET weight = -999 WHERE type = 'module' AND name = 'badbehavior'");
@@ -108,13 +107,13 @@ function badbehavior_install() {
   if (array_search(FALSE, $thestatus) !== FALSE) {
     drupal_set_message(st('Setting the module weight of Bad Behavior failed.'), 'error');
   }
-}
+}* /
 
 /**
  * Implements hook_uninstall().
- */
+ *
 function badbehavior_uninstall() {
-  //drupal_uninstall_schema('badbehavior');
+  drupal_uninstall_schema('badbehavior');
   variable_del('badbehavior_mail');
   variable_del('badbehavior_email');
   variable_del('badbehavior_logging');
@@ -131,10 +130,10 @@ function badbehavior_uninstall() {
   variable_del('badbehavior_verbose_logging_enable');
   variable_del('badbehavior_db_installed');
   cache_clear_all('variables', 'cache');
-}
+}*/
 
 // Rename variables.
-function badbehavior_update_6100() {
+function badbehavior_update_7100() {
   $mail = variable_get('badbehavior_email', variable_get('site_mail', ini_get('sendmail_from')));
   variable_set('badbehavior_mail', $mail);
   variable_del('badbehavior_email');
@@ -151,19 +150,20 @@ function badbehavior_update_6100() {
 }
 
 // Reset module weight for earliest possible loading position.
-function badbehavior_update_6200() {
+function badbehavior_update_7300() {
   //$retfun = array();
   //$retfun[] = update_sql("UPDATE {system} SET weight = -999 WHERE type = 'module' AND name = 'badbehavior'");
-  $num_updated = db_update('system')
+  $retfun = array();
+  $retfun[] = db_update('system')
     ->fields(array(
-      'weight' => -999,
+      'weight' => -998,
     ))
     ->condition('type', 'module', '=')
     ->condition('name', 'badbehavior', '=')
     ->execute();
     //"UPDATE {system} SET weight = -999 WHERE type = 'module' AND name =     'badbehavior'";
-  //return $retfun;
-  return;
+//  return $retfun;
+ return;
 
 }
 

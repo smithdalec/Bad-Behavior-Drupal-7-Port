@@ -54,8 +54,8 @@ system cracker.
    REQUIREMENTS
 ----------------------------------------------------------
 
-- Drupal 6.x
-- PHP 4.3.0 or greater
+- Drupal 7.x
+- PHP 5.2 or greater
 - BadBehavior 2.1.15
 
 
