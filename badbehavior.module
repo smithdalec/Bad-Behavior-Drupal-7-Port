@@ -1,7 +1,11 @@
 <?php
 
+/**
+ * @file
+ * Integrates Bad Behavior with Drupal
+ */
 // Point BB scripts path to new universal libraries directory.
-define('BB2_CWD', dirname(__FILE__) . '/../../libraries/bad-behavior');
+define('BB2_CWD', './sites/all/libraries/bad-behavior');
 
 /**
  * Implements hook_help().
@@ -23,8 +27,12 @@ function badbehavior_permission() {
   return array(
     'administer bad behavior' => array(
       'title' => t('Administer Bad Behavior'),
-      'description' => t('bypass bad behavior protection'),
+      'description' => t('Perform administration tasks for the Bad Behavior module.'),
     ),
+    'bypass bad behavior protection' => array(
+      'title' => t('Bypass Bad Behavior protection'),
+      'description' => t('Don\'t examine the HTTP requests from users with this permission.'),
+    )
   );
 }
 
@@ -32,7 +40,7 @@ function badbehavior_permission() {
  * Implements hook_menu().
  */
 function badbehavior_menu() {
-  $items['admin/settings/badbehavior'] = array(
+  $items['admin/config/system/badbehavior'] = array(
     'title' => 'Bad Behavior',
     'description' => 'Configure automatic spam blocking for your site.',
     'page callback' => 'drupal_get_form',
@@ -58,18 +66,24 @@ function badbehavior_menu() {
 }
 /**
  * Implements hook_boot().
+ *
+ * Stops Bad Behavior from loading on non-cached pages if we are running Drupal 
+ * from the command line (Drush), or if we are logged in.
  */
 function badbehavior_boot() {
-  if (!$GLOBALS['user']->uid) {
+  if (!drupal_is_cli() && !$GLOBALS['user']->uid) {
     badbehavior_start_badbehavior();
   }
 }
 
 /**
  * Implements hook_init().
+ *
+ * Stops Bad Behavior from loading on all pages if we are running Drupal 
+ * from the command line (Drush), or if we are logged in.
  */
 function badbehavior_init() {
-  if ($GLOBALS['user']->uid) {
+  if (!drupal_is_cli() && $GLOBALS['user']->uid) {
     badbehavior_start_badbehavior();
   }
   // Adds CSS to hide Project Honey Pot QuickLink link in the footer of every page.
@@ -97,7 +111,9 @@ function badbehavior_start_badbehavior() {
  * Returns TRUE if files exist and are read, otherwise returns FALSE
  */
 function badbehavior_load_includes() {
-  if (is_file(BB2_CWD . '/bad-behavior/core.inc.php') && is_file(BB2_CWD . '/bad-behavior/responses.inc.php') && is_file(BB2_CWD . '/bad-behavior-mysql.php')) {
+  if (is_file(BB2_CWD . '/bad-behavior/core.inc.php') &&
+      is_file(BB2_CWD . '/bad-behavior/responses.inc.php') &&
+      is_file(BB2_CWD . '/bad-behavior-mysql.php')) {
     require_once(BB2_CWD . '/bad-behavior/core.inc.php');
     require_once(BB2_CWD . '/bad-behavior/responses.inc.php');
     require_once(BB2_CWD . '/bad-behavior-mysql.php');
@@ -147,9 +163,12 @@ function bb2_db_query($query) {
   set_error_handler('badbehavior_db_errortrap');
   $result = db_query($query);
   restore_error_handler();
-  if ($result == FALSE)
+  if ($result == FALSE) {
     return FALSE;
-  return $result;
+  }
+  else {
+    return $result->rowCount();
+  }
 }
 
 /**
@@ -230,20 +249,17 @@ function bb2_convertdate($bbdate) {
   }
 }
 
-/*
-// Adds a hidden Project Honey Pot QuickLink link to the footer of every page.
-function badbehavior_footer() {
-  if (variable_get('badbehavior_httpbl_quicklink', '')) {
-    return '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') . '">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n";
-  }
-}
- */
-
 /**
  * Implements hook_page_build().
+ *
+ * Adds a hidden Project Honey Pot QuickLink link to the footer of every page.
  */
 function badbehavior_page_build(&$page) {
   if (variable_get('badbehavior_httpbl_quicklink', '')) {
-    return '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') . '">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n";
+    $page['page_bottom']['badbehavior']= array(
+      '#type' => 'markup',
+      '#markup' => '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') .
+        '">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n"
+    );
   }
 }

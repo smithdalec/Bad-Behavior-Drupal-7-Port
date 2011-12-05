@@ -17,8 +17,7 @@ Additional commits for module improvement by:
 - Sean Robertson (http://drupal.org/user/7074)
 - Dave Reid (http://drupal.org/user/53892)
 - Greg Piper (http://drupal.org/user/426296)
-
-Upgrade to Drupal 7 by:
+- Hans Fredrik Nordhaug (http://drupal.org/user/40521)
 - Dale Smith (http://drupal.org/user/1654510)
 
 Bad Behavior PHP Scripts by:
@@ -58,12 +57,21 @@ system cracker.
 ----------------------------------------------------------
 
 - Drupal 7.x
-- PHP 5.2 or greater
 - BadBehavior 2.1.15
 
+----------------------------------------------------------
+   INSTALLATION WITH DRUSH
+----------------------------------------------------------
+
+With Drush, you can do the normal
+
+   drush dl badbehavior
+   drush en badbehavior
+
+and it will even install the BadBehavior PHP script automatically.
 
 ----------------------------------------------------------
-   INSTALLATION
+   INSTALLATION WITH FTP/MANUALLY
 ----------------------------------------------------------
 
 1. Extract the tarball into the modules folder of your Drupal install.
