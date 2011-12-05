@@ -36,7 +36,7 @@ function badbehavior_overview() {
     $sql = db_select('bad_behavior_log', 'b')
       ->fields('b')
       ->extend('PagerDefault')
-        ->limit(20)
+        ->limit(50)
       ->extend('TableSort')
         ->orderByHeader($header)
       ->condition('b.key', '00000000', '<>')
@@ -84,7 +84,6 @@ function badbehavior_overview() {
  * The table in HTML format
  */
 function badbehavior_event($id = NULL) {
-  var_dump($id);
   if (!badbehavior_load_includes(array('responses'))) {
     return 'Bad Behavior is not installed correctly. See the <a href="/sites/all/modules/badbehavior/README.txt">README.txt</a> for installation details.';
   }
