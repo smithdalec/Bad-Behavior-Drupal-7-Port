@@ -112,8 +112,6 @@ function badbehavior_load_includes() {
  * Return current time in the format preferred by your database.
  *
  * @return string
- * Returns a formatted date string. If a non-numeric value is used for 
- * timestamp, FALSE is returned and an E_WARNING level error is emitted.
  */
 function bb2_db_date() {
    return gmdate('Y-m-d H:i:s'); // Example is MySQL format
