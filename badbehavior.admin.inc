@@ -42,7 +42,6 @@ function badbehavior_overview() {
       ->condition('b.key', '00000000', '<>')
       ->execute();
   }
-  var_dump($sql);
   $rows = array();
   if (isset($sql)) {
     foreach ($sql as $record) {
