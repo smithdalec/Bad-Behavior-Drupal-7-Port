@@ -130,7 +130,7 @@ function badbehavior_load_includes() {
  * @return string
  */
 function bb2_db_date() {
-   return gmdate('Y-m-d H:i:s'); // Example is MySQL format
+  return gmdate('Y-m-d H:i:s'); // Example is MySQL format
 }
 
 /**
@@ -140,15 +140,15 @@ function bb2_db_date() {
  *
  * @return string
  */
-  function bb2_db_escape($string) {                                               
-    return addslashes($string);                                             
- }
- 
+function bb2_db_escape($string) {
+  return addslashes($string);
+}
+
 /**
  * Someone doesn't like PHP's error handling?
  *
  * @param int $errno
- * @param string $string 
+ * @param string $string
  */
 function badbehavior_db_errortrap($errno, $string) {
 }
@@ -183,7 +183,7 @@ function bb2_db_rows($result) {
 /**
  * Fetch the admin's email address.
  *
- * @return string 
+ * @return string
  */
 function bb2_email() {
   return variable_get('badbehavior_mail', variable_get('site_mail', ini_get('sendmail_from')));
@@ -244,7 +244,7 @@ function bb2_convertdate($bbdate) {
   if (variable_get('badbehavior_log_timeformat', '24') == '24') {
     return format_date($timestamp, 'custom', 'Y-m-d H:i:s');
   }
-  else {   
+  else {
     return format_date($timestamp, 'custom', 'Y-m-d g:i:s a');
   }
 }
