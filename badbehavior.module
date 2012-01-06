@@ -83,7 +83,7 @@ function badbehavior_boot() {
  * from the command line (Drush), or if we are logged in.
  */
 function badbehavior_init() {
-  if (!drupal_is_cli() && $GLOBALS['user']->uid) {
+  if (!drupal_is_cli() && !$GLOBALS['user']->uid) {
     badbehavior_start_badbehavior();
   }
   // Adds CSS to hide Project Honey Pot QuickLink link in the footer of every page.
