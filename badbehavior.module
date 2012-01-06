@@ -67,7 +67,7 @@ function badbehavior_menu() {
 /**
  * Implements hook_boot().
  *
- * Stops Bad Behavior from loading on non-cached pages if we are running Drupal 
+ * Stops Bad Behavior from loading on non-cached pages if we are running Drupal
  * from the command line (Drush), or if we are logged in.
  */
 function badbehavior_boot() {
@@ -79,7 +79,7 @@ function badbehavior_boot() {
 /**
  * Implements hook_init().
  *
- * Stops Bad Behavior from loading on all pages if we are running Drupal 
+ * Stops Bad Behavior from loading on all pages if we are running Drupal
  * from the command line (Drush), or if we are logged in.
  */
 function badbehavior_init() {

@@ -79,7 +79,7 @@ function badbehavior_overview() {
  * Builds the "Details" table displaying data about an individual log entry
  *
  * @param string $id
- * 
+ *
  * @return string
  * The table in HTML format
  */
@@ -234,7 +234,7 @@ function badbehavior_settings_form() {
   $form['proxy']['badbehavior_reverse_proxy'] = array(
     '#type' => 'checkbox',
     '#title' => 'Enable reverse proxy support',
-    '#default_value' => variable_get('badbehavior_reverse_proxy', variable_get('reverse_proxy', 0)),           
+    '#default_value' => variable_get('badbehavior_reverse_proxy', variable_get('reverse_proxy', 0)),
       // Uses the default from settings.php
     '#description' => t('When enabled, Bad Behavior will assume it is receiving a connection from a reverse proxy, when a specific HTTP header is received. This option is enabled by default when you enable Drupal\'s built-in reverse_proxy option.'),
   );
@@ -244,7 +244,7 @@ function badbehavior_settings_form() {
 
 /**
  * Settings admimistration form field validation
- * 
+ *
  * @param $form
  *
  * @param $form_state
