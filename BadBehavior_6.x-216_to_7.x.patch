@@ -1,0 +1,708 @@
+diff --git a/README.txt b/README.txt
+index c62e062..4906a39 100644
+--- a/README.txt
++++ b/README.txt
+@@ -17,6 +17,8 @@ Additional commits for module improvement by:
+ - Sean Robertson (http://drupal.org/user/7074)
+ - Dave Reid (http://drupal.org/user/53892)
+ - Greg Piper (http://drupal.org/user/426296)
++- Hans Fredrik Nordhaug (http://drupal.org/user/40521)
++- Dale Smith (http://drupal.org/user/1654510)
+ 
+ Bad Behavior PHP Scripts by:
+ - Michael Hampton (http://bad-behavior.ioerror.us)
+@@ -54,13 +56,22 @@ system cracker.
+    REQUIREMENTS
+ ----------------------------------------------------------
+ 
+-- Drupal 6.x
+-- PHP 4.3.0 or greater
++- Drupal 7.x
+ - BadBehavior 2.1.15
+ 
++----------------------------------------------------------
++   INSTALLATION WITH DRUSH
++----------------------------------------------------------
++
++With Drush, you can do the normal
++
++   drush dl badbehavior
++   drush en badbehavior
++
++and it will even install the BadBehavior PHP script automatically.
+ 
+ ----------------------------------------------------------
+-   INSTALLATION
++   INSTALLATION WITH FTP/MANUALLY
+ ----------------------------------------------------------
+ 
+ 1. Extract the tarball into the modules folder of your Drupal install.
+diff --git a/badbehavior.admin.inc b/badbehavior.admin.inc
+index efd90c4..d28a0e2 100644
+--- a/badbehavior.admin.inc
++++ b/badbehavior.admin.inc
+@@ -2,86 +2,135 @@
+ 
+ /**
+  * @file
+- * Admin page callbacks for the badbehavior module. 
++ * Admin page callbacks for the badbehavior module.
+  */
+ 
++/**
++ * Builds the log table seen in the /admin/reports/badbehavior/ page.
++ *
++ * @return string
++ * The actual table in HTML format
++ */
+ function badbehavior_overview() {
+   if (!badbehavior_load_includes(array('responses'))) {
+     return 'Bad Behavior is not installed correctly. See the <a href="/sites/all/modules/badbehavior/README.txt">README.txt</a> for installation details.';
+   }
+-
+   $header = array(
+     array('data' => t('Response')),
+     array('data' => t('Reason')),
+-    array('data' => t('Date'), 'field' => 'w.date', 'sort' => 'desc'),
+-    array('data' => t('IP'), 'field' => 'w.ip'),
+-    array('data' => t('Agent'), 'field' => 'w.user_agent', 'colspan' => 2)
++    array('data' => t('Date'), 'field' => 'b.date', 'sort' => 'desc'),
++    array('data' => t('IP'), 'field' => 'b.ip'),
++    array('data' => t('Agent'), 'field' => 'b.user_agent', 'colspan' => 2)
+   );
+   $logtype = variable_get('badbehavior_logging', 1);
+   if ($logtype == 'verbose') {
+-    $sql = 'SELECT w.* FROM {bad_behavior_log} w '. tablesort_sql($header);
++    $sql = db_select('bad_behavior_log', 'b')
++      ->fields('b')
++      ->extend('PagerDefault')
++        ->limit(20)
++      ->extend('TableSort')
++        ->orderByHeader($header)
++      ->execute();
+   }
+   elseif ($logtype == '1') {
+-    $sql = "SELECT w.* FROM {bad_behavior_log} w WHERE w.key <> '00000000' " . tablesort_sql($header);
+-  }
+-  else {
+-    $sql = '';
+-  }
+-  if ($sql) {
+-  $result = pager_query($sql, 50);
+-  while ($behave = db_fetch_object($result)) {
+-    $response = bb2_get_response($behave->key);
+-    $behave->localdate = bb2_convertdate($behave->date);
+-    $rows[] = array('data' => array($response['response'], $response['log'], $behave->localdate, $behave->ip, $behave->user_agent, l(t('details'), "admin/reports/badbehavior/event/$behave->id")));
++    $sql = db_select('bad_behavior_log', 'b')
++      ->fields('b')
++      ->extend('PagerDefault')
++        ->limit(50)
++      ->extend('TableSort')
++        ->orderByHeader($header)
++      ->condition('b.key', '00000000', '<>')
++      ->execute();
+   }
++  $rows = array();
++  if (isset($sql)) {
++    foreach ($sql as $record) {
++      $response = bb2_get_response($record->key);
++      $record->localdate = bb2_convertdate($record->date);
++      $rows[] = array(
++        'data' => array(
++          $response['response'],
++          $response['log'],
++          $record->localdate,
++          $record->ip,
++          $record->user_agent,
++            l(t('details'), "admin/reports/badbehavior/event/$record->id") // FIX ME
++        )
++      );
++    }
+   }
+-  if (!$rows) {
+-    $rows[] = array(array('data' => t('No log messages available.'), 'colspan' => '6'));
+-  }
+-
+-  $output = theme('table', $header, $rows) . theme('pager', NULL, 50, 0);
+-
++  $output = theme('table',
++    array(
++      'header' => $header,
++      'rows' => $rows,
++      'caption' => '',
++      'empty' => 'No log messages available',
++    )
++  );
++  $output .= theme('pager',
++    array(
++      'tags' => array()
++    )
++  );
+   return $output;
+ }
+ 
++/**
++ * Builds the "Details" table displaying data about an individual log entry
++ *
++ * @param string $id
++ *
++ * @return string
++ * The table in HTML format
++ */
+ function badbehavior_event($id = NULL) {
+   if (!badbehavior_load_includes(array('responses'))) {
+     return 'Bad Behavior is not installed correctly. See the <a href="/sites/all/modules/badbehavior/README.txt">README.txt</a> for installation details.';
+   }
+   $output = '';
+-  $result = db_query('SELECT w.* FROM {bad_behavior_log} w WHERE w.id = %d', $id);
+-  if ($behave = db_fetch_object($result)) {
+-      $response = bb2_get_response($behave->key);
+-      $behave->localdate = bb2_convertdate($behave->date);
+-      $output .= '<table border="1" cellpadding="2" cellspacing="2">';
+-      $output .= ' <tr><th>'. t('IP Addr') .'</th><td>';
+-    if ($behave->ip) {
+-      $output .= $behave->ip .'</td></tr>'; }
++  $result = db_select('bad_behavior_log', 'b')
++    ->fields('b')
++    ->condition('id', $id, '=')
++    ->execute();
++  $rows = array();
++  foreach ($result as $record) {
++    $response = bb2_get_response($record->key);
++    $record->localdate = bb2_convertdate($record->date);
++    $output .= '<table border="1" cellpadding="2" cellspacing="2">';
++    $output .= ' <tr><th>' . t('IP Addr') . '</th><td>';
++    if ($record->ip) {
++      $output .= $record->ip . '</td></tr>'; }
+     else {
+       $output .= '<span style="color:red">Possible Proxy Settings Error:</span> No IP address reported</td></tr>';
+     }
+-      $output .= ' <tr><th>'. t('Hostname') .'</th><td>';
+-    if ($behave->ip) {
+-      $output .= gethostbyaddr($behave->ip) .' ('. l('whois', 'http://www.whois.sc/'. $behave->ip) .')</td></tr>';
++    $output .= ' <tr><th>' . t('Hostname') . '</th><td>';
++    if ($record->ip) {
++      $output .= gethostbyaddr($record->ip) . ' (' . l(t('whois'), 'http://www.whois.sc/' . $record->ip) . ')</td></tr>';
+     }
+     else {
+-      $output .= '<span style="color:red">Possible Proxy Settings Error:</span> No hostname reported</td></tr>';
++    $output .= '<span style="color:red">Possible Proxy Settings Error:</span> No hostname reported</td></tr>';
+     }
+-      $output .= ' <tr><th>'. t('Date') .'</th><td>'. $behave->localdate .'</td></tr>';
+-      $output .= ' <tr><th>'. t('Request type') .'</th><td>'. $behave->request_method .'</td></tr>';
+-      $output .= ' <tr><th>'. t('URI') .'</th><td>'. $behave->request_uri .'</td></tr>';
+-      $output .= ' <tr><th>'. t('Protocol') .'</th><td>'. $behave->server_protocol .'</td></tr>';
+-      $output .= ' <tr><th>'. t('User Agent') .'</th><td>'. $behave->user_agent .'</td></tr>';
+-      $output .= ' <tr><th>'. t('Headers') .'</th><td>'. $behave->http_headers .'</td></tr>';
+-      $output .= ' <tr><th>'. t('Request Entity') .'</th><td>'. $behave->request_entity .'</td></tr>';
+-      $output .= ' <tr><th>'. t('Denied Reason') .'</th><td>'. $response['log'] .'</td></tr>';
+-      $output .= ' <tr><th>'. t('Explanation') .'</th><td>'. $response['explanation'] .'</td></tr>';
+-      $output .= ' <tr><th>'. t('Response') .'</th><td>'. $response['response'] .'</td></tr>';
+-      $output .= '</table>';
++    $output .= ' <tr><th>' . t('Date') . '</th><td>' . $record->localdate . '</td></tr>';
++    $output .= ' <tr><th>' . t('Request type') . '</th><td>' . $record->request_method . '</td></tr>';
++    $output .= ' <tr><th>' . t('URI') . '</th><td>' . $record->request_uri . '</td></tr>';
++    $output .= ' <tr><th>' . t('Protocol') . '</th><td>' . $record->server_protocol . '</td></tr>';
++    $output .= ' <tr><th>' . t('User Agent') . '</th><td>' . $record->user_agent . '</td></tr>';
++    $output .= ' <tr><th>' . t('Headers') . '</th><td>' . $record->http_headers . '</td></tr>';
++    $output .= ' <tr><th>' . t('Request Entity') . '</th><td>' . $record->request_entity . '</td></tr>';
++    $output .= ' <tr><th>' . t('Denied Reason') . '</th><td>' . $response['log'] . '</td></tr>';
++    $output .= ' <tr><th>' . t('Explanation') . '</th><td>' . $response['explanation'] . '</td></tr>';
++    $output .= ' <tr><th>' . t('Response') . '</th><td>' . $response['response'] . '</td></tr>';
++    $output .= '</table>';
+   }
+   return $output;
+ }
+ 
++/**
++ * Builds the Settings form found on the /admin/settings/badbehavior page
++ *
++ * @return array
++ * An array of data to be displayed in the Settings form.
++ */
+ function badbehavior_settings_form() {
+ 
+   $form['standard'] = array(
+@@ -91,7 +140,7 @@ function badbehavior_settings_form() {
+   $form['standard']['badbehavior_mail'] = array(
+     '#type' => 'textfield',
+     '#title' => t('Administrator Email'),
+-    '#default_value' => variable_get('badbehavior_mail', variable_get('site_mail', ini_get('sendmail_from'))),
++    '#default_value' => bb2_email(),
+     '#description' => t('E-mail address for blocked users to contact in order to gain access.'),
+     '#required' => TRUE,
+   );
+@@ -185,15 +234,21 @@ function badbehavior_settings_form() {
+   $form['proxy']['badbehavior_reverse_proxy'] = array(
+     '#type' => 'checkbox',
+     '#title' => 'Enable reverse proxy support',
+-    '#default_value' => variable_get('badbehavior_reverse_proxy', variable_get('reverse_proxy', 0)),           // Uses the default from settings.php
++    '#default_value' => variable_get('badbehavior_reverse_proxy', variable_get('reverse_proxy', 0)),
++      // Uses the default from settings.php
+     '#description' => t('When enabled, Bad Behavior will assume it is receiving a connection from a reverse proxy, when a specific HTTP header is received. This option is enabled by default when you enable Drupal\'s built-in reverse_proxy option.'),
+   );
+-
+   return system_settings_form($form);
+ }
+ 
+ 
+-// Settings admimistration form field validation
++/**
++ * Settings admimistration form field validation
++ *
++ * @param $form
++ *
++ * @param $form_state
++ */
+ function badbehavior_settings_form_validate($form, &$form_state) {
+   $values = $form_state['values'];
+   if (!empty($values['badbehavior_httpbl_quicklink'])) {
+@@ -219,4 +274,3 @@ function badbehavior_settings_form_validate($form, &$form_state) {
+     form_set_error('badbehavior_httpbl_age', t('You must enter only a number from 1 to 60 for the http:BL Maximum Threat Age.'));
+   }
+ }
+-
+diff --git a/badbehavior.drush.inc b/badbehavior.drush.inc
+index 1166656..f4ad00b 100644
+--- a/badbehavior.drush.inc
++++ b/badbehavior.drush.inc
+@@ -2,7 +2,7 @@
+ 
+ /**
+  * @file
+- * Drush integration for the badbehavior module. 
++ * Drush integration for the badbehavior module.
+  */
+ 
+ /**
+diff --git a/badbehavior.info b/badbehavior.info
+index 1951edc..a87136e 100644
+--- a/badbehavior.info
++++ b/badbehavior.info
+@@ -1,11 +1,6 @@
+ name = Bad Behavior
+ description = Stop comment spam before it starts by trapping and blocking spambots before they have a chance to post comments.
+ package = Spam control
+-core = 6.x
+-
+-; Information added by drupal.org packaging script on 2011-10-10
+-version = "6.x-2.216"
+-core = "6.x"
+-project = "badbehavior"
+-datestamp = "1318279601"
++core = 7.x
++configure = admin/config/system/badbehavior
+ 
+diff --git a/badbehavior.install b/badbehavior.install
+index 504b038..9b3a5e3 100755
+--- a/badbehavior.install
++++ b/badbehavior.install
+@@ -2,10 +2,12 @@
+ 
+ /**
+  * @file
+- * Install, update and uninstall functions for the Bad Behavior module. 
++ * Install, update and uninstall functions for the Bad Behavior module.
+  */
+ 
+-// Implements hook_schema().
++/**
++ * Implements hook_schema().
++ */
+ function badbehavior_schema() {
+   $schema['bad_behavior_log'] = array(
+     'description' => 'Stores hit logs for the Bad Behavior module.',
+@@ -19,9 +21,8 @@ function badbehavior_schema() {
+         'not null' => TRUE,
+       ),
+       'date' => array(
+-        'type' => 'datetime',
+-        'not null' => TRUE,
+-        'default' => '1970-01-01 00:00:00',
++        'mysql_type' => 'DATETIME',
++        'not null' => FALSE,
+       ),
+       'request_method' => array(
+         'type' => 'text',
+@@ -62,7 +63,9 @@ function badbehavior_schema() {
+   return $schema;
+ }
+ 
+-// Implements hook_requirements().
++/**
++ * Implements hook_requirements().
++ */
+ function badbehavior_requirements($phase) {
+   $requirements = array();
+   if ($phase == 'runtime') {
+@@ -93,21 +96,29 @@ function badbehavior_requirements($phase) {
+   return $requirements;
+ }
+ 
+-// Implements hook_install().
++/**
++ * Implements hook_install().
++ */
+ function badbehavior_install() {
+-  drupal_install_schema('badbehavior');
+   // Set module weight for the badbehavior module
+   $thestatus = array();
+-  $thestatus[] =   db_query("UPDATE {system} SET weight = -999 WHERE type = 'module' AND name = 'badbehavior'");
++  $thestatus[] =   db_update('system')
++    ->fields(array(
++      'weight' => -999,
++    ))
++    ->condition('type', 'module', '=')
++    ->condition('name', 'badbehavior', '=')
++    ->execute();
+   // If there is one FALSE value in the status array, there was an error.
+   if (array_search(FALSE, $thestatus) !== FALSE) {
+-    drupal_set_message(t('Setting the module weight of Bad Behavior failed.'), 'error');
++    drupal_set_message(st('Setting the module weight of Bad Behavior failed.'), 'error');
+   }
+ }
+ 
+-// Implements hook_uninstall().
++/**
++ * Implements hook_uninstall().
++ */
+ function badbehavior_uninstall() {
+-  drupal_uninstall_schema('badbehavior');
+   variable_del('badbehavior_mail');
+   variable_del('badbehavior_email');
+   variable_del('badbehavior_logging');
+@@ -126,8 +137,12 @@ function badbehavior_uninstall() {
+   cache_clear_all('variables', 'cache');
+ }
+ 
+-// Rename variables.
+-function badbehavior_update_6100() {
++/**
++ * Rename variables.
++ *
++ * Implements hook_update_N().
++ */
++function badbehavior_update_7100() {
+   $mail = variable_get('badbehavior_email', variable_get('site_mail', ini_get('sendmail_from')));
+   variable_set('badbehavior_mail', $mail);
+   variable_del('badbehavior_email');
+@@ -140,12 +155,23 @@ function badbehavior_update_6100() {
+   variable_set('badbehavior_strict', $strict);
+   variable_del('badbehavior_strict_mode_enable');
+ 
+-  return array();
++  return;
+ }
+ 
+-// Reset module weight for earliest possible loading position.
+-function badbehavior_update_6200() {
++/**
++ * Reset module weight for earliest possible loading position.
++ *
++ * Implements hook_update_N().
++ */
++function badbehavior_update_7300() {
+   $retfun = array();
+-  $retfun[] = update_sql("UPDATE {system} SET weight = -999 WHERE type = 'module' AND name = 'badbehavior'");
+-  return $retfun;
++  $retfun[] = db_update('system')
++    ->fields(array(
++      'weight' => -999,
++    ))
++    ->condition('type', 'module', '=')
++    ->condition('name', 'badbehavior', '=')
++    ->execute();
++  return;
+ }
++
+diff --git a/badbehavior.module b/badbehavior.module
+index 773bc8f..77145eb 100644
+--- a/badbehavior.module
++++ b/badbehavior.module
+@@ -1,27 +1,46 @@
+ <?php
+ 
+-// Point BB scripts path to new universal libraries directory. 
++/**
++ * @file
++ * Integrates Bad Behavior with Drupal
++ */
++// Point BB scripts path to new universal libraries directory.
+ define('BB2_CWD', './sites/all/libraries/bad-behavior');
+ 
+-// Implements hook_help().
++/**
++ * Implements hook_help().
++ */
+ function badbehavior_help($path, $arg) {
+   $output = '';
+   switch ($path) {
+     case "admin/reports/badbehavior":
+-      $output .= '<p>' . t("The Bad Behavior module examines HTTP requests from visitors to your web site, and any suspicious requests are logged for later review. Suspicious visitors are shown an error page with instructions on how to view the site without triggering the bad behavior error message.") . '</p>';
+-      break;
++      $output .= '<p>' . t("The Bad Behavior module examines HTTP requests from visitors to your web site, and any suspicious requests are logged for later review. Suspicious visitors are shown an error page with instructions on how to view the site without triggering the bad behavior error messages.") . '</p>';
++    break;
+   }
+   return $output;
+ }
+ 
+-// Implements hook_perm().
+-function badbehavior_perm() {
+-  return array('administer bad behavior', 'bypass bad behavior protection');
++/**
++ * Implements hook_permission().
++ */
++function badbehavior_permission() {
++  return array(
++    'administer bad behavior' => array(
++      'title' => t('Administer Bad Behavior'),
++      'description' => t('Perform administration tasks for the Bad Behavior module.'),
++    ),
++    'bypass bad behavior protection' => array(
++      'title' => t('Bypass Bad Behavior protection'),
++      'description' => t('Don\'t examine the HTTP requests from users with this permission.'),
++    )
++  );
+ }
+ 
+-// Implements hook_menu().
++/**
++ * Implements hook_menu().
++ */
+ function badbehavior_menu() {
+-  $items['admin/settings/badbehavior'] = array(
++  $items['admin/config/system/badbehavior'] = array(
+     'title' => 'Bad Behavior',
+     'description' => 'Configure automatic spam blocking for your site.',
+     'page callback' => 'drupal_get_form',
+@@ -45,21 +64,30 @@ function badbehavior_menu() {
+   );
+   return $items;
+ }
+-
+-// Implements hook_boot().
++/**
++ * Implements hook_boot().
++ *
++ * Stops Bad Behavior from loading on non-cached pages if we are running Drupal
++ * from the command line (Drush), or if we are logged in.
++ */
+ function badbehavior_boot() {
+-  if (!$GLOBALS['user']->uid) {
++  if (!drupal_is_cli() && !$GLOBALS['user']->uid) {
+     badbehavior_start_badbehavior();
+   }
+ }
+ 
+-// Implements hook_init().
++/**
++ * Implements hook_init().
++ *
++ * Stops Bad Behavior from loading on all pages if we are running Drupal
++ * from the command line (Drush), or if we are logged in.
++ */
+ function badbehavior_init() {
+-  if ($GLOBALS['user']->uid) {
++  if (!drupal_is_cli() && !$GLOBALS['user']->uid) {
+     badbehavior_start_badbehavior();
+   }
+-// Adds CSS to hide Project Honey Pot QuickLink link in the footer of every page.
+-  drupal_add_css(drupal_get_path('module', 'badbehavior') .'/badbehavior.css');
++  // Adds CSS to hide Project Honey Pot QuickLink link in the footer of every page.
++  drupal_add_css(drupal_get_path('module', 'badbehavior') . '/badbehavior.css');
+ }
+ 
+ function badbehavior_start_badbehavior() {
+@@ -72,12 +100,23 @@ function badbehavior_start_badbehavior() {
+   }
+ }
+ 
+-// Load BadBehavior library files.
++/**
++ * Load BadBehavior library files.
++ *
++ * Check to make sure the main Bad Behavior files (external content) exist
++ * and require them for the module to actually work. The default location
++ * is /sites/all/libraries/bad-behavior/bad-behavior/
++ *
++ * @return bool
++ * Returns TRUE if files exist and are read, otherwise returns FALSE
++ */
+ function badbehavior_load_includes() {
+-  if (is_file(BB2_CWD .'/bad-behavior/core.inc.php') && is_file(BB2_CWD .'/bad-behavior/responses.inc.php') && is_file(BB2_CWD .'/bad-behavior-mysql.php')) {
+-    require_once(BB2_CWD .'/bad-behavior/core.inc.php');
+-    require_once(BB2_CWD .'/bad-behavior/responses.inc.php');
+-    require_once(BB2_CWD .'/bad-behavior-mysql.php');
++  if (is_file(BB2_CWD . '/bad-behavior/core.inc.php') &&
++      is_file(BB2_CWD . '/bad-behavior/responses.inc.php') &&
++      is_file(BB2_CWD . '/bad-behavior-mysql.php')) {
++    require_once(BB2_CWD . '/bad-behavior/core.inc.php');
++    require_once(BB2_CWD . '/bad-behavior/responses.inc.php');
++    require_once(BB2_CWD . '/bad-behavior-mysql.php');
+     return TRUE;
+   }
+   else {
+@@ -85,57 +124,76 @@ function badbehavior_load_includes() {
+   }
+ }
+ 
+-// Return current time in the format preferred by your database.
++/**
++ * Return current time in the format preferred by your database.
++ *
++ * @return string
++ */
+ function bb2_db_date() {
+   return gmdate('Y-m-d H:i:s'); // Example is MySQL format
+ }
+ 
+-// Return affected rows from most recent query.
+-function bb2_db_affected_rows() {
+-  return db_affected_rows();
+-}
+-
+-// Escape a string for database usage
++/**
++ * Escape a string for database usage
++ *
++ * @param string $string
++ *
++ * @return string
++ */
+ function bb2_db_escape($string) {
+-  return db_escape_string($string);
+-}
+-
+-// Return the number of rows in a particular query.
+-function bb2_db_num_rows($result) {
+-  if ($result != FALSE)
+-    return count($result);
+-  return 0;
++  return addslashes($string);
+ }
+ 
++/**
++ * Someone doesn't like PHP's error handling?
++ *
++ * @param int $errno
++ * @param string $string
++ */
+ function badbehavior_db_errortrap($errno, $string) {
+ }
+ 
+-// Run a query and return the results, if any.
++/**
++ * Run a query and return the results, if any.
++ *
++ * @param type $query
++ * @return object
++ */
+ function bb2_db_query($query) {
+   set_error_handler('badbehavior_db_errortrap');
+   $result = db_query($query);
+   restore_error_handler();
+-  if ($result == FALSE)
++  if ($result == FALSE) {
+     return FALSE;
+-  return db_affected_rows();
++  }
++  else {
++    return $result->rowCount();
++  }
+ }
+ 
+-// Return all rows in a particular query.
++/**
++ * Return all rows in a particular query.
++ *
++ * @return object
++ */
+ function bb2_db_rows($result) {
+   return $result;
+ }
+ 
+-// Return emergency contact email address.
++/**
++ * Fetch the admin's email address.
++ *
++ * @return string
++ */
+ function bb2_email() {
+   return variable_get('badbehavior_mail', variable_get('site_mail', ini_get('sendmail_from')));
+ }
+ 
+-// Write settings to database.
+-function bb2_write_settings($settings) {
+-  return;
+-}
+-
+-// Retrieve settings from database.
++/**
++ * Retrieve settings from database.
++ *
++ * @return array
++ */
+ function bb2_read_settings() {
+   $logging = variable_get('badbehavior_logging', 1);
+   return array(
+@@ -154,7 +212,9 @@ function bb2_read_settings() {
+   );
+ }
+ 
+-// Installation.
++/**
++ * Installation of Bad Behavior
++ */
+ function bb2_install() {
+   if (variable_get('badbehavior_db_installed', 0) != BB2_VERSION) {
+     bb2_db_query(bb2_table_structure('{bad_behavior_log}'));
+@@ -162,15 +222,25 @@ function bb2_install() {
+   }
+ }
+ 
+-// Return the top-level relative path of wherever we are (for cookies).
++/**
++ * Return the top-level relative path of wherever we are (for cookies).
++ *
++ * @return string
++ */
+ function bb2_relative_path() {
+   global $base_path;
+   return $base_path;
+ }
+ 
+-// Converts dates in BB log screen output to server's time zone.
++/**
++ * Converts dates in BB log screen output to server's time zone.
++ *
++ * @param $bbdate
++ *
++ * @return string
++ */
+ function bb2_convertdate($bbdate) {
+-  $timestamp = strtotime($bbdate .' UTC');
++  $timestamp = strtotime($bbdate . ' UTC');
+   if (variable_get('badbehavior_log_timeformat', '24') == '24') {
+     return format_date($timestamp, 'custom', 'Y-m-d H:i:s');
+   }
+@@ -179,9 +249,17 @@ function bb2_convertdate($bbdate) {
+   }
+ }
+ 
+-// Adds a hidden Project Honey Pot QuickLink link to the footer of every page.
+-function badbehavior_footer() {
++/**
++ * Implements hook_page_build().
++ *
++ * Adds a hidden Project Honey Pot QuickLink link to the footer of every page.
++ */
++function badbehavior_page_build(&$page) {
+   if (variable_get('badbehavior_httpbl_quicklink', '')) {
+-    return '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') . '">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n";
++    $page['page_bottom']['badbehavior']= array(
++      '#type' => 'markup',
++      '#markup' => '<span class="bbhtthappsb"><a href="' . variable_get('badbehavior_httpbl_quicklink', '') .
++        '">' . variable_get('badbehavior_httpbl_quicklinktext', 'Customize This') . '</a></span>' . "\n"
++    );
+   }
+ }
